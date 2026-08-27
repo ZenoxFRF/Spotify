@@ -1,27 +1,15 @@
 const encoder = new TextEncoder();
-const schema = `
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT NOT NULL COLLATE NOCASE UNIQUE,
-  password_hash TEXT NOT NULL,
-  password_salt TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS sessions (
-  token_hash TEXT PRIMARY KEY,
-  user_id INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL,
-  FOREIGN KEY(user_id) REFERENCES users(id)
-);
-CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
-`;
 
 export function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers } });
 }
 export async function ensureSchema(env) {
   if (!env.DB) throw new Error("D1_BINDING_MISSING");
-  await env.DB.exec(schema);
+  await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL COLLATE NOCASE UNIQUE, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL, created_at INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at)"),
+  ]);
   const columns = (await env.DB.prepare("PRAGMA table_info(users)").all()).results.map(row => row.name);
   const additions = [
     ["email", "ALTER TABLE users ADD COLUMN email TEXT COLLATE NOCASE"],
