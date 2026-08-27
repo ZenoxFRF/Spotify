@@ -24,10 +24,15 @@
       <p class="account-copy">Crée un profil pour garder ton pseudo sur le site.</p>
       <label for="accountUsername">Pseudo</label>
       <input id="accountUsername" maxlength="24" autocomplete="username" placeholder="Ton pseudo">
+      <label for="accountEmail">E-mail</label>
+      <input id="accountEmail" type="email" autocomplete="email" placeholder="ton@email.com">
       <label for="accountPassword">Mot de passe</label>
       <input id="accountPassword" type="password" minlength="8" autocomplete="current-password" placeholder="8 caractères minimum">
       <p id="accountMessage" class="message" aria-live="polite"></p>
       <div class="account-actions"><button id="registerButton">Créer mon compte</button><button id="accountLoginButton" class="secondary">Se connecter</button></div>
+      <button id="forgotPasswordButton" class="secondary">Mot de passe oublié</button>
+      <div id="verifyPanel" hidden><label for="verificationEmail">E-mail à confirmer</label><input id="verificationEmail" type="email" autocomplete="email"><label for="verificationCode">Code reçu</label><input id="verificationCode" inputmode="numeric" maxlength="6" placeholder="123456"><button id="verifyEmailButton">Confirmer mon e-mail</button></div>
+      <div id="resetPanel" hidden><label for="resetEmail">E-mail</label><input id="resetEmail" type="email" autocomplete="email"><label for="resetCode">Code reçu</label><input id="resetCode" inputmode="numeric" maxlength="6" placeholder="123456"><label for="resetPassword">Nouveau mot de passe</label><input id="resetPassword" type="password" minlength="8" autocomplete="new-password"><button id="resetPasswordButton">Modifier le mot de passe</button></div>
     </section>
     </section>
 

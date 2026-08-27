@@ -4,6 +4,7 @@ const $ = (id) => document.getElementById(id);
 let tracks = [], currentTrack = null, questionIndex = 0, stopTimer = null;
 let currentStartSeconds = 0, currentClipSeconds = 0, excerptRemainingMs = 0, excerptStartedAt = 0, excerptPaused = false;
 let feedbackAudio = null, accountUser = null;
+let playbackEpoch = 0;
 const music = new Audio();
 music.preload = "metadata";
 music.volume = .75;
@@ -25,22 +26,25 @@ function updateAccountUI(user) {
 }
 async function checkAccount() { try { updateAccountUI((await siteApi("/api/session")).user); } catch { updateAccountUI(null); } }
 async function registerAccount() {
-  const username = $("accountUsername").value.trim(), password = $("accountPassword").value;
+  const username = $("accountUsername").value.trim(), email = $("accountEmail").value.trim(), password = $("accountPassword").value;
   if (!/^[A-Za-zÀ-ÿ0-9_-]{3,24}$/.test(username)) return setAccountMessage("Le pseudo doit contenir entre 3 et 24 caractères.");
   if (password.length < 8) return setAccountMessage("Le mot de passe doit contenir au moins 8 caractères.");
-  try { const result = await siteApi("/api/register", { method: "POST", body: JSON.stringify({ username, password }) }); updateAccountUI(result.user); $("accountPanel").hidden = true; }
+  try { const result = await siteApi("/api/register", { method: "POST", body: JSON.stringify({ username, email, password }) }); $("verificationEmail").value = result.email; $("verifyPanel").hidden = false; setAccountMessage("Un code vient d’être envoyé par e-mail."); }
   catch (error) { setAccountMessage(error.message); }
 }
 async function loginAccount() {
-  const username = $("accountUsername").value.trim(), password = $("accountPassword").value;
-  if (!username || !password) return setAccountMessage("Entre ton pseudo et ton mot de passe.");
-  try { const result = await siteApi("/api/login", { method: "POST", body: JSON.stringify({ username, password }) }); updateAccountUI(result.user); $("accountPanel").hidden = true; }
+  const email = $("accountEmail").value.trim(), password = $("accountPassword").value;
+  if (!email || !password) return setAccountMessage("Entre ton e-mail et ton mot de passe.");
+  try { const result = await siteApi("/api/login", { method: "POST", body: JSON.stringify({ email, password }) }); updateAccountUI(result.user); $("accountPanel").hidden = true; }
   catch (error) { setAccountMessage(error.message); }
 }
-function finishExcerpt() { clearTimeout(stopTimer); stopTimer = null; excerptRemainingMs = 0; excerptPaused = false; music.pause(); }
-function startExcerptTimer(durationMs) { clearTimeout(stopTimer); excerptRemainingMs = durationMs; excerptStartedAt = performance.now(); stopTimer = setTimeout(finishExcerpt, durationMs); }
+async function verifyEmail() { try { const result = await siteApi("/api/verify-email", { method: "POST", body: JSON.stringify({ email: $("verificationEmail").value.trim(), code: $("verificationCode").value.trim() }) }); updateAccountUI(result.user); $("accountPanel").hidden = true; } catch (error) { setAccountMessage(error.message); } }
+async function requestReset() { try { await siteApi("/api/forgot-password", { method: "POST", body: JSON.stringify({ email: $("accountEmail").value.trim() }) }); $("resetEmail").value = $("accountEmail").value.trim(); $("resetPanel").hidden = false; setAccountMessage("Si ce compte existe, un code a été envoyé."); } catch (error) { setAccountMessage(error.message); } }
+async function resetPassword() { try { await siteApi("/api/reset-password", { method: "POST", body: JSON.stringify({ email: $("resetEmail").value.trim(), code: $("resetCode").value.trim(), password: $("resetPassword").value }) }); $("resetPanel").hidden = true; setAccountMessage("Mot de passe modifié. Connecte-toi."); } catch (error) { setAccountMessage(error.message); } }
+function finishExcerpt() { playbackEpoch += 1; clearTimeout(stopTimer); stopTimer = null; excerptRemainingMs = 0; excerptPaused = false; music.pause(); }
+function startExcerptTimer(durationMs, epoch) { clearTimeout(stopTimer); excerptRemainingMs = durationMs; excerptStartedAt = performance.now(); stopTimer = setTimeout(() => { if (epoch === playbackEpoch) finishExcerpt(); }, durationMs); }
 function pauseExcerpt() { if (!stopTimer) return; excerptRemainingMs = Math.max(0, excerptRemainingMs - (performance.now() - excerptStartedAt)); clearTimeout(stopTimer); stopTimer = null; excerptPaused = excerptRemainingMs > 0; music.pause(); }
-async function resumeExcerpt() { if (excerptPaused && excerptRemainingMs > 0) { await music.play(); excerptPaused = false; startExcerptTimer(excerptRemainingMs); } else await playExcerpt(true); }
+async function resumeExcerpt() { if (excerptPaused && excerptRemainingMs > 0) { await music.play(); excerptPaused = false; startExcerptTimer(excerptRemainingMs, playbackEpoch); } else await playExcerpt(true); }
 function playFeedbackSound(correct) {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return;
@@ -66,10 +70,13 @@ function selectExcerpt(track) { const clipSeconds = Math.min(CLIP_MAX_SECONDS, M
 function waitForAudio(event) { return new Promise((resolve, reject) => { const timeout = setTimeout(() => reject(new Error("Le titre met trop de temps à démarrer.")), 12000); music.addEventListener(event, () => { clearTimeout(timeout); resolve(); }, { once: true }); music.addEventListener("error", () => { clearTimeout(timeout); reject(new Error("Ce titre ne peut pas être lu.")); }, { once: true }); }); }
 async function playExcerpt(reuseCurrentExcerpt = false) {
   if (!currentTrack) return;
-  finishExcerpt(); if (!reuseCurrentExcerpt || !currentClipSeconds) ({ startSeconds: currentStartSeconds, clipSeconds: currentClipSeconds } = selectExcerpt(currentTrack));
+  finishExcerpt(); const epoch = playbackEpoch; if (!reuseCurrentExcerpt || !currentClipSeconds) ({ startSeconds: currentStartSeconds, clipSeconds: currentClipSeconds } = selectExcerpt(currentTrack));
   if (music.src !== currentTrack.streamUrl) { music.src = currentTrack.streamUrl; music.load(); await waitForAudio("loadedmetadata"); }
-  music.currentTime = Math.min(currentStartSeconds, Math.max(0, (music.duration || currentStartSeconds) - .1)); await music.play();
-  $("clipInfo").textContent = `Extrait de ${Math.ceil(currentClipSeconds)} seconde(s) maximum`; startExcerptTimer(currentClipSeconds * 1000);
+  if (epoch !== playbackEpoch) return;
+  music.currentTime = Math.min(currentStartSeconds, Math.max(0, (music.duration || currentStartSeconds) - .1));
+  try { await music.play(); } catch (error) { if (epoch !== playbackEpoch || error.name === "AbortError") return; throw error; }
+  if (epoch !== playbackEpoch) return;
+  $("clipInfo").textContent = `Extrait de ${Math.ceil(currentClipSeconds)} seconde(s) maximum`; startExcerptTimer(currentClipSeconds * 1000, epoch);
 }
 function nextQuestion() {
   finishExcerpt(); currentTrack = shuffle(tracks).find(track => new Set(tracks.filter(item => item.id !== track.id && titleKey(item) !== titleKey(track)).map(titleKey)).size >= 3);
@@ -81,11 +88,12 @@ function nextQuestion() {
   playExcerpt().catch(error => setMessage(error.message));
 }
 function answerQuestion(answer, button, container) { finishExcerpt(); [...container.children].forEach(item => { item.disabled = true; if (item.textContent === currentTrack.title) item.classList.add("correct"); }); if (answer.id === currentTrack.id) { $("result").textContent = "✅ Bonne réponse !"; playFeedbackSound(true); } else { button.classList.add("wrong"); $("result").textContent = `❌ La bonne réponse était : ${currentTrack.title}`; playFeedbackSound(false); } $("nextButton").hidden = false; }
-function startGame() { $("welcomeView").hidden = true; $("gameSection").hidden = false; $("connectionStatus").textContent = "Catalogue public prêt. Choisis un artiste."; }
+function startGame() { if (!accountUser) { $("accountPanel").hidden = false; return setAccountMessage("Crée ou connecte-toi à ton compte pour jouer."); } $("welcomeView").hidden = true; $("gameSection").hidden = false; $("connectionStatus").textContent = "Catalogue public prêt. Choisis un artiste."; }
 $("startGameButton").addEventListener("click", startGame);
 $("accountButton").addEventListener("click", () => { $("accountPanel").hidden = false; setAccountMessage(""); });
 $("closeAccountButton").addEventListener("click", () => { $("accountPanel").hidden = true; });
 $("registerButton").addEventListener("click", registerAccount); $("accountLoginButton").addEventListener("click", loginAccount);
+$("verifyEmailButton").addEventListener("click", verifyEmail); $("forgotPasswordButton").addEventListener("click", requestReset); $("resetPasswordButton").addEventListener("click", resetPassword);
 $("logoutButton").addEventListener("click", async () => { await siteApi("/api/logout", { method: "POST" }).catch(() => {}); updateAccountUI(null); });
 $("loadArtistButton").addEventListener("click", loadArtist); $("playButton").addEventListener("click", () => resumeExcerpt().catch(error => setMessage(error.message))); $("stopButton").addEventListener("click", pauseExcerpt); $("replayButton").addEventListener("click", () => playExcerpt(true).catch(error => setMessage(error.message))); $("nextButton").addEventListener("click", nextQuestion);
 $("changeArtistButton").addEventListener("click", () => { finishExcerpt(); $("question").hidden = true; $("artistPanel").hidden = false; $("artistUrl").focus(); });

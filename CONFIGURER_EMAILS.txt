@@ -1,0 +1,22 @@
+CONFIGURER LES E-MAILS
+======================
+
+Cette version oblige chaque joueur à confirmer son adresse e-mail avant de jouer.
+Elle envoie aussi un code de réinitialisation de mot de passe.
+
+1. Crée un compte sur https://resend.com/ puis crée une clé API.
+2. Dans Cloudflare Pages > ton projet > Settings > Environment variables, ajoute
+   ces deux variables pour Production :
+
+   RESEND_API_KEY = ta clé API Resend
+   EMAIL_FROM = Blind Test <noreply@ton-domaine.fr>
+
+3. Dans Resend, vérifie le domaine utilisé dans EMAIL_FROM. Pour les essais,
+   Resend permet seulement d'envoyer à l'adresse e-mail du propriétaire.
+4. Redéploie après avoir ajouté les variables.
+
+Le code reçu est valable 15 minutes. La clé Resend ne va jamais dans GitHub ni
+dans le navigateur : elle reste secrète dans Cloudflare.
+
+IMPORTANT : les anciens comptes qui n'ont pas d'adresse e-mail confirmée devront
+en créer un nouveau. C'est nécessaire pour rendre la vérification obligatoire.
