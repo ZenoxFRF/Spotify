@@ -1,0 +1,19 @@
+METTRE LE SITE EN LIGNE SANS OUVRIR DE PORT
+
+1. Crée un compte gratuit sur https://dash.cloudflare.com/.
+2. Ajoute le domaine vzmgen.xyz à Cloudflare et, chez ton vendeur de domaine,
+   remplace les serveurs DNS par ceux affichés par Cloudflare.
+   Tu n'as plus besoin du record A vers 92.161.145.170.
+3. Dans Cloudflare, va dans Workers & Pages > Create application > Get started
+   > Drag and drop your files.
+4. Nom du projet : spotify-blind-test (ou un autre nom), puis importe le ZIP
+   que tu as téléchargé. Clique sur Deploy site.
+5. Dans ton projet Pages : Custom domains > Set up a domain > entre spotify.vzmgen.xyz.
+   Cloudflare crée le réglage DNS et le HTTPS automatiquement.
+6. Quand https://spotify.vzmgen.xyz/ affiche le site, ouvre le Spotify Developer Dashboard.
+   Dans Settings, ajoute exactement cette Redirect URI :
+   https://spotify.vzmgen.xyz/
+   Mets aussi cette adresse dans le champ Website et enregistre.
+
+Attends quelques minutes après le changement DNS/HTTPS puis teste le site.
+Un compte Spotify Premium reste obligatoire pour écouter dans le navigateur.
