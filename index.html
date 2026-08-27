@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spotify Blind Test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <section id="welcomeView">
+    <div class="welcome-top"><div class="brand"><span class="brand-icon">♫</span><span>SPOTIFY BLIND TEST</span></div><button id="accountButton" class="secondary">Mon compte</button></div>
+    <h1>Tu connais vraiment<br><em>tes artistes préférés ?</em></h1>
+    <p class="intro">Écoute un extrait mystère, puis choisis le bon titre parmi quatre réponses.</p>
+
+    <section id="loginSection">
+      <button id="startGameButton" class="spotify-button"><span>▶</span> Jouer sans connexion</button>
+      <p class="hint">Musique issue de catalogues publics. Aucun compte musical n’est demandé.</p>
+    </section>
+    <section id="accountPanel" class="account-panel" hidden>
+      <button id="closeAccountButton" class="close-account" aria-label="Fermer">×</button>
+      <p class="account-kicker">ESPACE JOUEUR</p>
+      <h2>Ton compte blind test</h2>
+      <p class="account-copy">Crée un profil pour garder ton pseudo sur le site.</p>
+      <label for="accountUsername">Pseudo</label>
+      <input id="accountUsername" maxlength="24" autocomplete="username" placeholder="Ton pseudo">
+      <label for="accountPassword">Mot de passe</label>
+      <input id="accountPassword" type="password" minlength="8" autocomplete="current-password" placeholder="8 caractères minimum">
+      <p id="accountMessage" class="message" aria-live="polite"></p>
+      <div class="account-actions"><button id="registerButton">Créer mon compte</button><button id="accountLoginButton" class="secondary">Se connecter</button></div>
+    </section>
+    </section>
+
+    <section id="gameSection" class="game-screen" hidden>
+      <header class="game-header">
+        <div class="brand"><span class="brand-icon">♫</span><span>BLIND TEST</span></div>
+        <div class="game-actions"><span id="userBadge" hidden></span><button id="changeArtistButton" class="secondary">Changer d’artiste</button><button id="logoutButton" class="secondary" hidden>Déconnexion</button></div>
+      </header>
+      <p id="connectionStatus" class="status"><span class="status-dot"></span>Préparation du catalogue…</p>
+      <div id="artistPanel" class="artist-form">
+        <h2>Choisis ton artiste</h2>
+        <p>Écris le nom d’un artiste pour chercher ses titres.</p>
+        <label for="artistUrl">Artiste à deviner</label>
+        <div class="input-row">
+          <input id="artistUrl" type="text" placeholder="Nom d’artiste" autocomplete="off">
+          <button id="loadArtistButton">Lancer <span>→</span></button>
+        </div>
+      </div>
+        <p id="message" class="message" aria-live="polite"></p>
+
+      <section id="question" hidden>
+        <div class="question-top">
+          <span id="questionNumber" class="question-badge">Question</span>
+          <div class="audio-controls">
+            <button id="playButton" class="control-button" title="Lire l’extrait">▶</button>
+            <button id="stopButton" class="control-button stop" title="Arrêter">■</button>
+            <button id="replayButton" class="secondary">↻ Réécouter</button>
+          </div>
+        </div>
+        <p id="clipInfo" class="hint">Extrait de 10 secondes maximum</p>
+        <div id="answers" class="answers"></div>
+        <p id="result" class="result" aria-live="polite"></p>
+        <button id="nextButton" hidden>Question suivante</button>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
